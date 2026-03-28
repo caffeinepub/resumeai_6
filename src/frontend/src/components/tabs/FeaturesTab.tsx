@@ -111,6 +111,17 @@ const FEATURES = [
     title: "Duplicate Content Detector",
     desc: "Detects repeated phrases, mirrored bullet points, and redundant skill mentions that appear across multiple sections. Eliminating duplicates tightens your resume, saves valuable space, and shows recruiters a focused, well-edited document.",
   },
+  {
+    icon: "🚩",
+    color: "rgba(239,68,68,0.18)",
+    glowColor: "rgba(239,68,68,0.5)",
+    accentHex: "#EF4444",
+    badge: "Detection",
+    badgeBg: "rgba(239,68,68,0.2)",
+    badgeColor: "#fca5a5",
+    title: "Red Flag Detector",
+    desc: "Scans your resume for 8 categories of common red flags that instantly signal low credibility to recruiters: content depth issues, consistency gaps, positioning mistakes, formatting traps, language problems, proof gaps, attention-to-detail killers, and psychological red flags. Each flag comes with a clear explanation and fix.",
+  },
 ];
 
 function FeatureCard({ f, index }: { f: (typeof FEATURES)[0]; index: number }) {

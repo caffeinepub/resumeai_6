@@ -4,17 +4,21 @@ import { ParticleCanvas } from "./components/ParticleCanvas";
 import { ToastContainer, type ToastMessage } from "./components/Toast";
 import { AboutTab } from "./components/tabs/AboutTab";
 import { BenefitsTab } from "./components/tabs/BenefitsTab";
+import { ExamplesTab } from "./components/tabs/ExamplesTab";
 import { FeaturesTab } from "./components/tabs/FeaturesTab";
 import { FutureScopeTab } from "./components/tabs/FutureScopeTab";
 import { HomeTab } from "./components/tabs/HomeTab";
 import { HowItWorksTab } from "./components/tabs/HowItWorksTab";
+import { ProfileTab } from "./components/tabs/ProfileTab";
 import {
   type AnalysisData,
   ResultsTab,
   generateAnalysisData,
 } from "./components/tabs/ResultsTab";
 import { UploadTab } from "./components/tabs/UploadTab";
+import { useActor } from "./hooks/useActor";
 import { useAudioEngine } from "./hooks/useAudioEngine";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
 
 type TabId =
   | "home"
@@ -24,7 +28,9 @@ type TabId =
   | "benefits"
   | "results"
   | "about"
-  | "future";
+  | "future"
+  | "examples"
+  | "profile";
 
 const TABS: { id: TabId; label: string; mobileLabel: string }[] = [
   { id: "home", label: "Home", mobileLabel: "🏠 Home" },
@@ -32,9 +38,11 @@ const TABS: { id: TabId; label: string; mobileLabel: string }[] = [
   { id: "features", label: "Features", mobileLabel: "✨ Features" },
   { id: "how", label: "How It Works", mobileLabel: "🔍 How It Works" },
   { id: "benefits", label: "Benefits", mobileLabel: "🎯 Benefits" },
+  { id: "examples", label: "Examples", mobileLabel: "📄 Eg." },
   { id: "results", label: "Results", mobileLabel: "📊 Results" },
   { id: "future", label: "Future Scope", mobileLabel: "🚀 Future Scope" },
   { id: "about", label: "About", mobileLabel: "👥 About" },
+  { id: "profile", label: "Profile", mobileLabel: "👤 Profile" },
 ];
 
 let toastCounter = 0;
@@ -50,6 +58,8 @@ export default function App() {
   const [confettiActive, setConfettiActive] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const { playClick, playHover, playResults } = useAudioEngine();
+  const { identity, login, clear, isLoggingIn } = useInternetIdentity();
+  const { actor } = useActor();
 
   const showToast = useCallback(
     (message: string, type: "success" | "error" | "info") => {
@@ -82,21 +92,41 @@ export default function App() {
     });
   }
 
-  function startAnalysis() {
+  function startAnalysis(role: string, fileName = "") {
     switchTab("results");
     setAnalysing(true);
     setAnalysisData(null);
-    setTimeout(() => {
-      const data = generateAnalysisData();
+    setTimeout(async () => {
+      const data = generateAnalysisData(role, fileName);
       setAnalysisData(data);
       setAnalysing(false);
       playResults();
       if (data.ats >= 80) setConfettiActive(true);
       showToast("🎉 Analysis complete! Check your scores.", "success");
+
+      // Save profile update if logged in
+      if (identity && actor) {
+        try {
+          const existing = await actor.getProfile();
+          const now = BigInt(Date.now()) * BigInt(1_000_000);
+          await actor.saveProfile({
+            displayName: existing?.displayName ?? "",
+            email: existing?.email ?? "",
+            targetRole: (role || existing?.targetRole) ?? "",
+            resumeCount: (existing?.resumeCount ?? BigInt(0)) + BigInt(1),
+            lastAnalysisScore: BigInt(Math.round(data.overall)),
+            createdAt: existing?.createdAt ?? now,
+          });
+        } catch {
+          // Non-critical — silently ignore profile save errors
+        }
+      }
     }, 3500);
   }
 
   document.body.classList.toggle("light-mode", !isDark);
+
+  const isLoggedIn = !!identity;
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -213,6 +243,33 @@ export default function App() {
               flexShrink: 0,
             }}
           >
+            {/* Auth buttons — desktop */}
+            <div
+              className="hidden-mobile"
+              style={{ display: "flex", gap: "6px", alignItems: "center" }}
+            >
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  data-ocid="nav.secondary_button"
+                  onClick={clear}
+                  style={authBtnStyle(false)}
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  data-ocid="nav.primary_button"
+                  onClick={login}
+                  disabled={isLoggingIn}
+                  style={authBtnStyle(true)}
+                >
+                  {isLoggingIn ? "Connecting..." : "Login"}
+                </button>
+              )}
+            </div>
+
             <button
               type="button"
               data-ocid="nav.toggle"
@@ -326,6 +383,41 @@ export default function App() {
               {tab.mobileLabel}
             </button>
           ))}
+          {/* Mobile auth */}
+          <div
+            style={{
+              padding: "8px 16px 4px",
+              borderTop: "1px solid var(--border)",
+              marginTop: "4px",
+            }}
+          >
+            {isLoggedIn ? (
+              <button
+                type="button"
+                data-ocid="nav.mobile.secondary_button"
+                onClick={() => {
+                  clear();
+                  setMobileOpen(false);
+                }}
+                style={{ ...authBtnStyle(false), width: "100%" }}
+              >
+                Logout
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-ocid="nav.mobile.primary_button"
+                onClick={() => {
+                  login();
+                  setMobileOpen(false);
+                }}
+                disabled={isLoggingIn}
+                style={{ ...authBtnStyle(true), width: "100%" }}
+              >
+                {isLoggingIn ? "Connecting..." : "Login"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -361,6 +453,11 @@ export default function App() {
         {activeTab === "benefits" && (
           <div style={{ animation: "fadeSlideIn 0.45s ease" }}>
             <BenefitsTab />
+          </div>
+        )}
+        {activeTab === "examples" && (
+          <div style={{ animation: "fadeSlideIn 0.45s ease" }}>
+            <ExamplesTab onAnalyze={startAnalysis} isDark={isDark} />
           </div>
         )}
         {activeTab === "results" && (
@@ -420,6 +517,11 @@ export default function App() {
         {activeTab === "about" && (
           <div style={{ animation: "fadeSlideIn 0.45s ease" }}>
             <AboutTab />
+          </div>
+        )}
+        {activeTab === "profile" && (
+          <div style={{ animation: "fadeSlideIn 0.45s ease" }}>
+            <ProfileTab onLogin={login} />
           </div>
         )}
       </main>
@@ -495,4 +597,22 @@ export default function App() {
       `}</style>
     </div>
   );
+}
+
+function authBtnStyle(primary: boolean): React.CSSProperties {
+  return {
+    padding: "7px 14px",
+    borderRadius: "8px",
+    border: primary ? "none" : "1px solid var(--border)",
+    background: primary
+      ? "linear-gradient(135deg, var(--accent), var(--cyan))"
+      : "var(--surface2)",
+    color: primary ? "#fff" : "var(--text2)",
+    fontFamily: "var(--font-body)",
+    fontWeight: 500,
+    fontSize: "0.8rem",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    whiteSpace: "nowrap" as const,
+  };
 }

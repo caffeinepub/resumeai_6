@@ -7,7 +7,7 @@ export interface UploadedFile {
 }
 
 interface UploadTabProps {
-  onAnalyze: () => void;
+  onAnalyze: (role: string, fileName: string) => void;
   onToast: (msg: string, type: "success" | "error" | "info") => void;
 }
 
@@ -15,6 +15,7 @@ type UploadState = "idle" | "uploading" | "progressing" | "done";
 
 export function UploadTab({ onAnalyze, onToast }: UploadTabProps) {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
+  const [selectedRole, setSelectedRole] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
@@ -282,50 +283,163 @@ export function UploadTab({ onAnalyze, onToast }: UploadTabProps) {
       )}
 
       {uploadState === "done" && uploadedFile && (
-        <div
-          data-ocid="upload.success_state"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            background: "rgba(52,211,153,0.08)",
-            border: "1px solid rgba(52,211,153,0.2)",
-            borderRadius: "var(--radius)",
-            padding: "20px 24px",
-            marginTop: "20px",
-            animation: "fadeSlideIn 0.4s ease",
-            flexWrap: "wrap",
-          }}
-        >
-          <span style={{ fontSize: "2rem" }}>✅</span>
-          <div style={{ flex: 1 }}>
-            <strong
+        <div style={{ marginTop: "20px", animation: "fadeSlideIn 0.4s ease" }}>
+          <div
+            data-ocid="upload.success_state"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              background: "rgba(52,211,153,0.08)",
+              border: "1px solid rgba(52,211,153,0.2)",
+              borderRadius: "var(--radius)",
+              padding: "20px 24px",
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontSize: "2rem" }}>✅</span>
+            <div style={{ flex: 1 }}>
+              <strong
+                style={{
+                  display: "block",
+                  marginBottom: "2px",
+                  color: "var(--green)",
+                }}
+              >
+                Resume uploaded successfully!
+              </strong>
+              <span style={{ fontSize: "0.83rem", color: "var(--text2)" }}>
+                {uploadedFile.name} · {(uploadedFile.size / 1024).toFixed(0)}KB
+                · Ready for analysis
+              </span>
+            </div>
+          </div>
+
+          {/* Target Job Role Selector */}
+          <div
+            style={{
+              background: "rgba(10,10,20,0.85)",
+              border: "1px solid rgba(108,99,255,0.4)",
+              boxShadow: "0 0 24px rgba(108,99,255,0.12)",
+              borderRadius: "var(--radius)",
+              padding: "20px 24px",
+              marginTop: "12px",
+            }}
+          >
+            <label
+              htmlFor="job-role-select"
               style={{
                 display: "block",
-                marginBottom: "2px",
-                color: "var(--green)",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                marginBottom: "10px",
+                color: "var(--text2)",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
               }}
             >
-              Resume uploaded successfully!
-            </strong>
-            <span style={{ fontSize: "0.83rem", color: "var(--text2)" }}>
-              {uploadedFile.name} · {(uploadedFile.size / 1024).toFixed(0)}KB ·
-              Ready for analysis
-            </span>
+              🎯 Target Job Role{" "}
+              <span
+                style={{
+                  color: "var(--text2)",
+                  fontWeight: 400,
+                  textTransform: "none",
+                  letterSpacing: 0,
+                }}
+              >
+                (optional — improves match analysis)
+              </span>
+            </label>
+            <select
+              id="job-role-select"
+              data-ocid="upload.select"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: "var(--radius)",
+                border: "1px solid rgba(108,99,255,0.3)",
+                background: "#0d0d1a",
+                color: "var(--text)",
+                fontSize: "0.9rem",
+                outline: "none",
+                cursor: "pointer",
+                appearance: "none",
+                WebkitAppearance: "none",
+                backgroundImage:
+                  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 14px center",
+                paddingRight: "36px",
+                transition: "border-color 0.2s",
+              }}
+              onFocus={(e) => {
+                (e.target as HTMLSelectElement).style.borderColor =
+                  "var(--accent)";
+              }}
+              onBlur={(e) => {
+                (e.target as HTMLSelectElement).style.borderColor =
+                  "var(--border)";
+              }}
+            >
+              <option value="">— Select a role —</option>
+              <optgroup label="Technology">
+                <option value="Software Engineer">Software Engineer</option>
+                <option value="Frontend Developer">Frontend Developer</option>
+                <option value="Backend Developer">Backend Developer</option>
+                <option value="Full Stack Developer">
+                  Full Stack Developer
+                </option>
+                <option value="Data Scientist">Data Scientist</option>
+                <option value="ML Engineer">ML Engineer</option>
+                <option value="DevOps Engineer">DevOps Engineer</option>
+                <option value="Cybersecurity Analyst">
+                  Cybersecurity Analyst
+                </option>
+                <option value="Product Manager">Product Manager</option>
+              </optgroup>
+              <optgroup label="Business">
+                <option value="Business Analyst">Business Analyst</option>
+                <option value="Marketing Manager">Marketing Manager</option>
+                <option value="Sales Executive">Sales Executive</option>
+                <option value="Operations Manager">Operations Manager</option>
+                <option value="HR Manager">HR Manager</option>
+                <option value="Finance Analyst">Finance Analyst</option>
+              </optgroup>
+              <optgroup label="Design">
+                <option value="UI/UX Designer">UI/UX Designer</option>
+                <option value="Graphic Designer">Graphic Designer</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="Content Writer">Content Writer</option>
+                <option value="Project Manager">Project Manager</option>
+                <option value="Data Analyst">Data Analyst</option>
+                <option value="Research Analyst">Research Analyst</option>
+              </optgroup>
+            </select>
           </div>
-          <button
-            type="button"
-            className="btn-primary"
-            data-ocid="upload.submit_button"
-            style={{ marginLeft: "auto" }}
-            onClick={(e) => {
-              addRipple(e);
-              onAnalyze();
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: "12px",
             }}
-            onMouseEnter={playHover}
           >
-            Analyze Now →
-          </button>
+            <button
+              type="button"
+              className="btn-primary"
+              data-ocid="upload.submit_button"
+              onClick={(e) => {
+                addRipple(e);
+                onAnalyze(selectedRole, uploadedFile?.name ?? "");
+              }}
+              onMouseEnter={playHover}
+            >
+              Analyze Now →
+            </button>
+          </div>
         </div>
       )}
     </section>
